@@ -12,14 +12,14 @@ vec_db = InMemoryVecDB()
 def init_db(file):
     print("---init database---")
     paragraphs = extract_text_from_pdf(file.name)
-    documents = split_text(paragraphs, 500, 100)
+    documents = split_text(paragraphs, 300, 100)
     print(len(documents))
     vec_db.add_documents(documents)
 
 
 def chat(user_input, chatbot, context, search_field):
     print("---chat button---")
-    search_results = vec_db.search(user_input, 2)
+    search_results = vec_db.search(user_input, 3)
     search_field = "\n\n".join(search_results)
     print("===building prompt===")
     prompt = build_prompt(info=search_results, query=user_input)

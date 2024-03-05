@@ -9,7 +9,6 @@ def split_text(paragraphs,chunk_size=300,overlap_size=100):
     while i < len(sentences):
         chunk = sentences[i]
         overlap = ''
-        prev_len = 0
         prev = i - 1
         # 向前计算重叠部分
         while prev >= 0 and len(sentences[prev])+len(overlap) <= overlap_size:
