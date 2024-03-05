@@ -11,22 +11,14 @@ vec_db = InMemoryVecDB()
 
 def init_db(file):
     print("---init database---")
-    print("===extract_text_from_pdf===")
     paragraphs = extract_text_from_pdf(file.name)
-    print("===split_text===")
     documents = split_text(paragraphs, 500, 100)
     print(len(documents))
-    print(documents[:20])
-    print("===2add_documents===")
     vec_db.add_documents(documents)
-    print("db len", len(documents))
-    print(documents[:20])
 
 
 def chat(user_input, chatbot, context, search_field):
     print("---chat button---")
-    print("===search in vectordb===")
-    print("input: ", user_input)
     search_results = vec_db.search(user_input, 2)
     search_field = "\n\n".join(search_results)
     print("===building prompt===")
@@ -53,18 +45,18 @@ def main():
 
         with gr.Row():
             with gr.Column():
-                fileCtrl = gr.File(label="上传文件", file_types=[',pdf'])
+                fileCtrl = gr.File(label="Upload file", file_types=[',pdf'])
 
         with gr.Row():
             with gr.Column(scale=2):
-                chatbot = gr.Chatbot()
+                chatbot = gr.Chatbot(height = 520)
             with gr.Column(scale=2):
-                # gr.HTML("""<h4>检索结果</h4>""")
-                search_field = gr.Textbox(show_label=False, placeholder="检索结果...", lines=10)
-                user_input = gr.Textbox(show_label=False, placeholder="输入框...", lines=2)
+                              
+                user_input = gr.Textbox(show_label=False, placeholder="Enter your questions about AMR...", lines=3)
                 with gr.Row():
-                    submitBtn = gr.Button("提交", variant="primary")
-                    emptyBtn = gr.Button("清空")
+                    submitBtn = gr.Button("Submit", variant="primary")
+                    emptyBtn = gr.Button("Clear")
+                search_field = gr.Textbox(show_label=False, placeholder="Reference...", lines=14)
 
         context = gr.State([])
 
