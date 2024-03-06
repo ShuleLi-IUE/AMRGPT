@@ -23,6 +23,7 @@ def init_db(file):
     paragraphs = extract_text_from_pdf(file.name)
     # larger intersect
     documents = split_text(paragraphs, 300, 150)
+
     print(len(documents))
     vec_db.add_documents_bge(documents)
 
@@ -36,6 +37,7 @@ def chat(user_input, chatbot, context, search_field, search_strategy = "rerank")
     elif search_strategy == "rerank":
         search_results = rerank(user_input, top_n, recall_n)
         search_field = "\n\n".join([f"{index+1}. (score: {item[0]:.2e}), {item[1]}" for index, item in enumerate(search_results)])
+
     print("===building prompt===")
     prompt = build_prompt(info=search_results, query=user_input)
     print("prompt content built:\n", prompt)
