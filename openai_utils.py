@@ -11,7 +11,7 @@ _ = load_dotenv(find_dotenv())
 openai.api_key = os.getenv('OPENAI_API_KEY')
 client = OpenAI()
     
-def get_completion(prompt, context, model="gpt-3.5-turbo"):
+def get_completion_openai(prompt, context, model="gpt-3.5-turbo"):
     """封装 openai 接口"""
     messages = context + [{"role": "user", "content": prompt}]
     response = client.chat.completions.create(
@@ -27,7 +27,7 @@ def get_completion(prompt, context, model="gpt-3.5-turbo"):
 #     return client.embeddings.create(input=[text], model=model)['data'][0]['embedding']
 #     return client.embeddings.create(input=[text], model=model)['data'][0]['embedding']
 
-def get_embedding(text, model="text-embedding-ada-002",dimensions=None):
+def get_embedding_openai(text, model="text-embedding-ada-002",dimensions=None):
     '''封装 OpenAI 的 Embedding 模型接口'''
     if model == "text-embedding-ada-002":
         dimensions = None
