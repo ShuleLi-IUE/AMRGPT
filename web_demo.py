@@ -65,7 +65,8 @@ def reset_state():
 def main():
     print("===begin gradio===")
     with gr.Blocks() as demo:
-        gr.HTML("""<h1 align="center">AMRGPT</h1>""")
+        gr.HTML("""<h1 align="center">AMRGPT</h1>
+                   <h3 align="center">Zhu Lab</h3>""")
 
         with gr.Row():
             with gr.Column():

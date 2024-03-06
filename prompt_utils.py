@@ -10,7 +10,7 @@ __INFO__
 User's question：
 __QUERY__
 
-please answer user's question in English.
+please answer user's question in user's language.
 """
 
 
