@@ -4,7 +4,7 @@ from openai_utils import get_embedding
 
 
 class InMemoryVecDB:
-
+    
     def __init__(self, name="demo"):
         self.chroma_client = chromadb.Client(Settings(allow_reset=True))
         self.chroma_client.reset()
