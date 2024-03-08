@@ -31,11 +31,11 @@ class InMemoryVecDB:
 
     def add_documents_bge(self, documents):
         self.collection.add(
-        embeddings=[get_embedding_bge(doc) for doc in documents],
-        documents=documents,
-        metadatas=[{"source": self.name} for _ in documents],
-        ids=[f"id_{i}" for i in range(len(documents))]
-    )
+            embeddings=[get_embedding_bge(doc) for doc in documents],
+            documents=documents,
+            metadatas=[{"source": self.name} for _ in documents],
+            ids=[f"id_{i}" for i in range(len(documents))]
+        )
 
     def search_bge(self, query, top_n):
         """检索向量数据库"""

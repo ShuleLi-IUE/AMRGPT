@@ -1,6 +1,0 @@
-openai==0.28.1
-python-dotenv
-pdfminer.six
-nltk==3.8.1
-chromadb==0.4.15
-gradio
