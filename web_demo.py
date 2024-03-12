@@ -3,7 +3,6 @@
 import gradio as gr
 from openai_utils import get_completion_openai
 from prompt_utils import build_prompt
-from vectordb_utils import InMemoryVecDB
 from pdf_utils import  extract_text_from_pdf_pdfplumber_with_pages
 from text_utils import split_text, split_text_with_pages
 from rerank_utils import rerank
@@ -16,12 +15,16 @@ import time
 import warnings
 warnings.filterwarnings("ignore")
 
-vec_db = InMemoryVecDB()
-vec_db_shule = ShuleVectorDB("l2")
-_ = load_dotenv(find_dotenv()) 
-rerank_model = CrossEncoder(os.getenv('RERANK_MODEL_PATH'))
 top_n = 5
 recall_n = 30
+distance = "l2"
+batch_size = 12
+
+vec_db_shule = ShuleVectorDB(space=distance,
+                             batch_size=batch_size)
+_ = load_dotenv(find_dotenv()) 
+rerank_model = CrossEncoder(os.getenv('RERANK_MODEL_PATH'))
+
 
 def init_db_pdf(file):
     print("---init database---")

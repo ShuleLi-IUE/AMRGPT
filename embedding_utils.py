@@ -21,12 +21,13 @@ embedding_model = BGEM3FlagModel(path,
 # bge-m3
 # dim: 1024
 # multi language
-def get_embedding_bge_m3(text):
-    data = embedding_model.encode(text, 
-                                  return_dense = True,
-                                  return_sparse= False,
-                                  return_colbert_vecs = False)['dense_vecs'].flatten().tolist()
+def get_embedding_bge_m3(texts, batch_size):
+    data = embedding_model.encode(texts, 
+                                  batch_size=batch_size,
+                                  return_dense=True,
+                                  return_sparse=False,
+                                  return_colbert_vecs=False)['dense_vecs'].tolist()
     return data
 
-def get_embedding_bge(text):
-    return get_embedding_bge_m3(text)
+def get_embedding_bge(texts, batch_size):
+    return get_embedding_bge_m3(texts, batch_size)

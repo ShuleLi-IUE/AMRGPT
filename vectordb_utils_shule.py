@@ -9,12 +9,13 @@ MAX_ELEMENTS = 2000000
 THREADS = 4
 
 class ShuleVectorDB:
-    def __init__(self, space = "l2"):
+    def __init__(self, space = "l2", batch_size = 12):
         self.index_hnsw = hnswlib.Index(space=space, dim=DIM)
         self.index_hnsw.init_index(max_elements=MAX_ELEMENTS, ef_construction=100, M=32)
         self.index_hnsw.set_num_threads(THREADS)
         self.cnt = 0
         self.data_dict = {}
+        self.batch_size = batch_size
         '''
         "embeddings": ,
         "text": ,
@@ -31,7 +32,8 @@ class ShuleVectorDB:
         # ids = np.array([f"id_{i}" for i in np.arange(self.cnt, self.cnt + n)])
         ids = np.arange(self.cnt, self.cnt + n)
         t0 = time.time()
-        embeddings=[get_embedding_bge(doc if country == 'xxx' else f"In {country}, " + doc) for doc in texts]
+        embeddings = get_embedding_bge([doc if country == 'xxx' else f"In {country}, " + doc for doc in texts],
+                                       batch_size=self.batch_size)
         t1 = time.time()
         print("one embedding time ", (t1 - t0) / n)
         self.index_hnsw.add_items(embeddings, ids=ids)
@@ -57,7 +59,8 @@ class ShuleVectorDB:
         
     def search_bge(self, query, top_n, verbose=True):
         t0 = time.time()
-        embedding = get_embedding_bge(query)
+        embedding = get_embedding_bge(query, 
+                                      batch_size=self.batch_size)
         
         if verbose: 
             t1 = time.time()
