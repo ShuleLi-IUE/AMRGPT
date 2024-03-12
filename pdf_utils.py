@@ -27,13 +27,30 @@ def extract_text_from_pdf_pdfminer(filename, page_numbers=None, min_line_length=
         paragraphs.append(buffer)
     return paragraphs
 
-def extract_text_from_pdf_pdfplumber(filename, page_numbers=None, min_line_length=10):
+def extract_text_from_pdf_pdfplumber_with_pages(filename, page_numbers=None, min_line_length=10):
+    pdf = pdfplumber.open(filename)
     paragraphs = []
-    return paragraphs
+    pages_record = []
+    buffer = ''
+    for page in pdf.pages:
+        if page_numbers is not None and page.page_number not in page_numbers:
+            continue
+        lines = page.extract_text().split("\n")
+        for text in lines:
+            if len(text) >= min_line_length:
+                buffer += (' '+text) if not text.endswith('-') else text.strip('-')
+            elif buffer:
+                paragraphs.append(buffer)
+                pages_record.append(page.page_number)
+                buffer = ''
+    if buffer:
+        paragraphs.append(buffer)
+        pages_record.append(page.page_number)
+    return paragraphs, pages_record
 
 
-def extract_text_from_pdf(filename,page_numbers=None,min_line_length=10,engine="pdfminer"):
-    if engine == "pdfminer":
-        return extract_text_from_pdf_pdfminer(filename, page_numbers, min_line_length)
-    else:
-        return extract_text_from_pdf_pdfplumber(filename, page_numbers, min_line_length)
+# def extract_text_from_pdf(filename,page_numbers=None,min_line_length=10,engine="pdfminer"):
+#     if engine == "pdfminer":
+#         return extract_text_from_pdf_pdfminer(filename, page_numbers, min_line_length)
+#     else:
+#         return extract_text_from_pdf_pdfplumber_with_pages(filename, page_numbers, min_line_length)

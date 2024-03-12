@@ -9,7 +9,7 @@ path = os.getenv('MULTILANG_EMBED_MODEL_PATH')
 
 # embedding_model = SentenceTransformer(path)
 embedding_model = BGEM3FlagModel(path,
-                      use_fp16=True)
+                      use_fp16=False)
 
 # bge-large-en-v1.5
 # dim: 1024

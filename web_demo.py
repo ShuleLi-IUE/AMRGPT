@@ -4,8 +4,8 @@ import gradio as gr
 from openai_utils import get_completion_openai
 from prompt_utils import build_prompt
 from vectordb_utils import InMemoryVecDB
-from pdf_utils import extract_text_from_pdf
-from text_utils import split_text
+from pdf_utils import  extract_text_from_pdf_pdfplumber_with_pages
+from text_utils import split_text, split_text_with_pages
 from rerank_utils import rerank
 from vectordb_utils_shule import ShuleVectorDB
 from sentence_transformers import CrossEncoder
@@ -17,7 +17,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 vec_db = InMemoryVecDB()
-vec_db_shule = ShuleVectorDB()
+vec_db_shule = ShuleVectorDB("l2")
 _ = load_dotenv(find_dotenv()) 
 rerank_model = CrossEncoder(os.getenv('RERANK_MODEL_PATH'))
 top_n = 5
@@ -25,9 +25,9 @@ recall_n = 30
 
 def init_db_pdf(file):
     print("---init database---")
-    paragraphs = extract_text_from_pdf(file.name)
+    paragraphs, pages = extract_text_from_pdf_pdfplumber_with_pages(file.name)
     # larger intersect
-    documents = split_text(paragraphs, 300, 150)
+    documents = split_text_with_pages(paragraphs, pages, 300, 150)
     print(len(documents))
     vec_db.add_documents_bge(documents)
 
@@ -51,34 +51,38 @@ def init_db_local():
     print("local database of report initing...") 
     pdf_files = [file for file in os.listdir(corpus_path) if file.endswith('.pdf')]
     for pdf_file in pdf_files:
-        paragraphs = extract_text_from_pdf(os.path.join(corpus_path, pdf_file))
+        paragraphs, pages = extract_text_from_pdf_pdfplumber_with_pages(os.path.join(corpus_path, pdf_file))
         # larger intersect
-        documents = split_text(paragraphs, 400, 100)
-        os.path.splitext(pdf_file)[0].split('_')
+        documents, pages_matched = split_text_with_pages(paragraphs, pages, 400, 100)
+        context = os.path.splitext(pdf_file)[0].split('_')
+        pd.DataFrame({"documents": documents,
+                     "pages_matched": pages_matched}).to_csv("tmp.csv")
         vec_db_shule.add_documents_dense(type="report",
                                        texts=documents, 
-                                       title=os.path.splitext(pdf_file)[0].split('_')[3],
-                                       year=os.path.splitext(pdf_file)[0].split('_')[1],
-                                       source=os.path.splitext(pdf_file)[0].split('_')[0])
+                                       pages=pages_matched,
+                                       title=context[4],
+                                       year=context[2],
+                                       country=context[1],
+                                       ORG=context[0])
     print("---init database finish---")
  
     
 # search = (hnsw, rerank, fusion)
-def chat(user_input, chatbot, context, search_field, search_strategy = "hnsw"):
+def chat(user_input, chatbot, context, search_field, search_strategy = "rerank"):
     print("---chat button---")
     search_results = []
     
     if search_strategy == "hnsw":
         search_labels = vec_db_shule.search_bge(user_input, top_n)
-        texts, titles, years, countries = vec_db_shule.get_context_by_labels(search_labels)
-        search_field = "\n\n".join([f"{i+1}. [Reference: {countries[i]}, {years[i]}, {titles[i]}]\n{texts[i]}" for i in range(top_n)])
-        prompt = build_prompt(info=[f"{texts[i]} [Reference {i+1}: {titles[i]}, {countries[i]}, {years[i]}]" for i in range(top_n)], query=user_input)
+        texts, pages, titles, years, countries, ORGs = vec_db_shule.get_context_by_labels(search_labels)
+        search_field = "\n\n".join([f"{i+1}. [Reference: {titles[i]}, Page: {pages[i]}, ORG: {ORGs[i]}, Year: {years[i]}]\n{texts[i]}" for i in range(top_n)])
+        prompt = build_prompt(info=[f"{texts[i]} [Reference: Page {pages[i]}, {titles[i]}, {years[i]}, {ORGs[i]}]" for i in range(top_n)], query=user_input)
         
     elif search_strategy == "rerank":
         print("===rerank===")
         search_results = rerank(user_input, top_n, recall_n)
-        search_field = "\n\n".join([f"{index+1}. [Reference: {item[4]}, {item[3]}, {item[2]}]\n(Score: {item[0]:.2e}) {item[1]}" for index, item in enumerate(search_results)])
-        prompt = build_prompt(info=[item[1] for item in search_results], query=user_input)
+        search_field = "\n\n".join([f"{index+1}. [Reference: {item[2]}, Page: {item[5]}, ORG: {item[6]}, Year: {item[3]}]\n(Score: {item[0]:.2e}) {item[1]}" for index, item in enumerate(search_results)])
+        prompt = build_prompt(info=[f"{item[1]} [Reference: Page {item[5]}, {item[2]}, {item[3]}, {item[6]}]" for item in search_results], query=user_input)
         
     elif search_strategy == "fusion":
         print("Not support yet.")
@@ -99,14 +103,14 @@ def chat(user_input, chatbot, context, search_field, search_strategy = "hnsw"):
 def rerank(user_input, top_n=5, recall_n=30, verbose=True):
     search_labels = vec_db_shule.search_bge(user_input, recall_n)
     t0 = time.time()
-    texts, titles, years, countries = vec_db_shule.get_context_by_labels(search_labels)
+    texts, pages, titles, years, countries, ORGs = vec_db_shule.get_context_by_labels(search_labels)
     t1 = time.time()
     if verbose: print("vec_db_shule.get_context_by_labels costs: ", t1 - t0)
     scores = rerank_model.predict([(user_input, doc) for doc in texts])
     t2 = time.time()
     if verbose: print("rerank_model.predict costs: ", t2 - t0)
     print()
-    sorted_list = sorted(zip(scores, texts, titles, years, countries), key=lambda x: x[0], reverse=True)
+    sorted_list = sorted(zip(scores, texts, titles, years, countries, pages, ORGs), key=lambda x: x[0], reverse=True)
     if verbose:
         print(f"finish rerank {len(sorted_list)} texts, return highest {top_n} texts")
     # for score, doc in sorted_list:

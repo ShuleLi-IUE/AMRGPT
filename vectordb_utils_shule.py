@@ -9,8 +9,8 @@ MAX_ELEMENTS = 2000000
 THREADS = 4
 
 class ShuleVectorDB:
-    def __init__(self):
-        self.index_hnsw = hnswlib.Index(space="l2", dim=DIM)
+    def __init__(self, space = "l2"):
+        self.index_hnsw = hnswlib.Index(space=space, dim=DIM)
         self.index_hnsw.init_index(max_elements=MAX_ELEMENTS, ef_construction=100, M=32)
         self.index_hnsw.set_num_threads(THREADS)
         self.cnt = 0
@@ -20,17 +20,18 @@ class ShuleVectorDB:
         "text": ,
         "type": paper, report
         "title": ,
+        "pages" ,
         "year": ,
-        "source": doi for paper, country for report,
-        # "page": journal for paper, page for report
+        "country": ,
+        "ORG": ,
         '''
             
-    def add_documents_dense(self, type, texts, title, year, source, verbose=True):
+    def add_documents_dense(self, type, texts, pages, title, year, country, ORG, verbose=True):
         n = len(texts)
         # ids = np.array([f"id_{i}" for i in np.arange(self.cnt, self.cnt + n)])
         ids = np.arange(self.cnt, self.cnt + n)
         t0 = time.time()
-        embeddings=[get_embedding_bge(doc) for doc in texts]
+        embeddings=[get_embedding_bge(doc if country == 'xxx' else f"In {country}, " + doc) for doc in texts]
         t1 = time.time()
         print("one embedding time ", (t1 - t0) / n)
         self.index_hnsw.add_items(embeddings, ids=ids)
@@ -40,10 +41,12 @@ class ShuleVectorDB:
         for i in range(n):
             self.data_dict[ids[i]] = {"embeddings": embeddings[i],
                                       "text": texts[i],
+                                      "page": pages[i],
                                       "type": type,
                                       "title": title,
                                       "year": year,
-                                      "source": source}
+                                      "country": country,
+                                      "ORG": ORG}
         self.cnt += n
         if verbose: 
             print(f"#{type}# Adding batch of {n} elements, now total index contains {self.cnt} elements")
@@ -68,13 +71,13 @@ class ShuleVectorDB:
         return labels[0].tolist()
     
     def get_context_by_labels(self, labels):
-        print(type(labels), labels)
-        print()
         texts = [self.data_dict[key]["text"] for key in labels]
+        pages = [self.data_dict[key]["page"] for key in labels]
         titles = [self.data_dict[key]["title"] for key in labels]
         years = [self.data_dict[key]["year"] for key in labels]
-        sources = [self.data_dict[key]["source"] for key in labels]
-        return texts, titles, years, sources
+        countries = [self.data_dict[key]["country"] for key in labels]
+        ORGs = [self.data_dict[key]["ORG"] for key in labels]
+        return texts, pages, titles, years, countries, ORGs
         
     
         
