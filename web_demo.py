@@ -26,13 +26,13 @@ _ = load_dotenv(find_dotenv())
 rerank_model = CrossEncoder(os.getenv('RERANK_MODEL_PATH'))
 
 
-def init_db_pdf(file):
-    print("---init database---")
-    paragraphs, pages = extract_text_from_pdf_pdfplumber_with_pages(file.name)
-    # larger intersect
-    documents = split_text_with_pages(paragraphs, pages, 300, 150)
-    print(len(documents))
-    vec_db.add_documents_bge(documents)
+# def init_db_pdf(file):
+#     print("---init database---")
+#     paragraphs, pages = extract_text_from_pdf_pdfplumber_with_pages(file.name)
+#     # larger intersect
+#     documents = split_text_with_pages(paragraphs, pages, 300, 150)
+#     print(len(documents))
+#     vec_db.add_documents_bge(documents)
 
 # load data from ./corpus
 def init_db_local():

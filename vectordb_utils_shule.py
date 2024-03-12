@@ -31,8 +31,9 @@ class ShuleVectorDB:
         n = len(texts)
         # ids = np.array([f"id_{i}" for i in np.arange(self.cnt, self.cnt + n)])
         ids = np.arange(self.cnt, self.cnt + n)
+        train_texts = [doc if country == 'xxx' else f"In {country}, " + doc for doc in texts]
         t0 = time.time()
-        embeddings = get_embedding_bge([doc if country == 'xxx' else f"In {country}, " + doc for doc in texts],
+        embeddings = get_embedding_bge(train_texts,
                                        batch_size=self.batch_size)
         t1 = time.time()
         print("one embedding time ", (t1 - t0) / n)
