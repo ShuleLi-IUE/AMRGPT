@@ -25,7 +25,7 @@ class ShuleVectorDB:
         # "page": journal for paper, page for report
         '''
             
-    def add_documents_bge(self, type, texts, title, year, source, verbose=True):
+    def add_documents_dense(self, type, texts, title, year, source, verbose=True):
         n = len(texts)
         # ids = np.array([f"id_{i}" for i in np.arange(self.cnt, self.cnt + n)])
         ids = np.arange(self.cnt, self.cnt + n)
@@ -48,6 +48,10 @@ class ShuleVectorDB:
         if verbose: 
             print(f"#{type}# Adding batch of {n} elements, now total index contains {self.cnt} elements")
             
+    # def add_documents_sparse(self, type, texts, title, year, source, verbose=True):
+            
+    # def add_documents_hybrid(self, type, texts, title, year, source, verbose=True):
+        
     def search_bge(self, query, top_n, verbose=True):
         t0 = time.time()
         embedding = get_embedding_bge(query)

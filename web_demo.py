@@ -13,6 +13,8 @@ from dotenv import load_dotenv, find_dotenv
 import os
 import pandas as pd
 import time
+import warnings
+warnings.filterwarnings("ignore")
 
 vec_db = InMemoryVecDB()
 vec_db_shule = ShuleVectorDB()
@@ -53,7 +55,7 @@ def init_db_local():
         # larger intersect
         documents = split_text(paragraphs, 400, 100)
         os.path.splitext(pdf_file)[0].split('_')
-        vec_db_shule.add_documents_bge(type="report",
+        vec_db_shule.add_documents_dense(type="report",
                                        texts=documents, 
                                        title=os.path.splitext(pdf_file)[0].split('_')[3],
                                        year=os.path.splitext(pdf_file)[0].split('_')[1],
@@ -70,17 +72,17 @@ def chat(user_input, chatbot, context, search_field, search_strategy = "hnsw"):
         search_labels = vec_db_shule.search_bge(user_input, top_n)
         texts, titles, years, countries = vec_db_shule.get_context_by_labels(search_labels)
         search_field = "\n\n".join([f"{i+1}. [Reference: {countries[i]}, {years[i]}, {titles[i]}]\n{texts[i]}" for i in range(top_n)])
+        prompt = build_prompt(info=[f"{texts[i]} [Reference {i+1}: {titles[i]}, {countries[i]}, {years[i]}]" for i in range(top_n)], query=user_input)
         
     elif search_strategy == "rerank":
         print("===rerank===")
         search_results = rerank(user_input, top_n, recall_n)
         search_field = "\n\n".join([f"{index+1}. [Reference: {item[4]}, {item[3]}, {item[2]}]\n(Score: {item[0]:.2e}) {item[1]}" for index, item in enumerate(search_results)])
+        prompt = build_prompt(info=[item[1] for item in search_results], query=user_input)
         
     elif search_strategy == "fusion":
         print("Not support yet.")
-        
-    print("===building prompt===")
-    prompt = build_prompt(info=[item[1] for item in search_results], query=user_input)
+            
     print("prompt content built:\n", prompt)
     
     print("===get completion===")

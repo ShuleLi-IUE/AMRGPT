@@ -1,7 +1,8 @@
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
+import pdfplumber
 
-def extract_text_from_pdf(filename,page_numbers=None,min_line_length=10):
+def extract_text_from_pdf_pdfminer(filename, page_numbers=None, min_line_length=10):
     """从 PDF 文件中（按指定页码）提取文字"""
     paragraphs = []
     buffer = ''
@@ -25,3 +26,14 @@ def extract_text_from_pdf(filename,page_numbers=None,min_line_length=10):
     if buffer:
         paragraphs.append(buffer)
     return paragraphs
+
+def extract_text_from_pdf_pdfplumber(filename, page_numbers=None, min_line_length=10):
+    paragraphs = []
+    return paragraphs
+
+
+def extract_text_from_pdf(filename,page_numbers=None,min_line_length=10,engine="pdfminer"):
+    if engine == "pdfminer":
+        return extract_text_from_pdf_pdfminer(filename, page_numbers, min_line_length)
+    else:
+        return extract_text_from_pdf_pdfplumber(filename, page_numbers, min_line_length)

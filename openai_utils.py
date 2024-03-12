@@ -15,7 +15,9 @@ def get_completion_openai(prompt, context, model="gpt-3.5-turbo"):
     """封装 openai 接口"""
     messages = context + [{"role": "user", "content": prompt}]
     response = client.chat.completions.create(
-        model=model,
+        # model=model,
+        model="gpt-4-turbo-preview", 
+        # "gpt-4"
         messages=messages,
         temperature=0,  # 模型输出的随机性，0 表示随机性最小
     )
