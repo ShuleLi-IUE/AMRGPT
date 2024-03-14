@@ -46,6 +46,7 @@ def extract_text_from_pdf_pdfplumber_with_pages(filename, page_numbers=None, min
     if buffer:
         paragraphs.append(buffer)
         pages_record.append(page.page_number)
+    pdf.close()
     return paragraphs, pages_record
 
 

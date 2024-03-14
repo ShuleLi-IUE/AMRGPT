@@ -1,8 +1,9 @@
-from openai_utils import get_embedding_openai
 from embedding_utils import get_embedding_bge
 import hnswlib
 import numpy as np
 import time
+import pickle
+from datetime import datetime
 
 DIM = 1024
 MAX_ELEMENTS = 2000000
@@ -82,6 +83,15 @@ class ShuleVectorDB:
         countries = [self.data_dict[key]["country"] for key in labels]
         ORGs = [self.data_dict[key]["ORG"] for key in labels]
         return texts, pages, titles, years, countries, ORGs
+    
+    def get_cnt(self):
+        return self.cnt
+        
+    def dump(self):
+        file_dump = 'index_' + 'n'+ str(self.cnt) + '_' + datetime.now().strftime('%m%d%H%M') + '.pickle'
+        with open(file_dump, 'wb') as f:
+            pickle.dump(self, f)
+        print("Dump index successfully, path: " + file_dump)
         
     
         

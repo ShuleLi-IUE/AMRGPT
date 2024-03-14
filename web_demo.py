@@ -9,23 +9,25 @@ from rerank_utils import rerank
 from vectordb_utils_shule import ShuleVectorDB
 from sentence_transformers import CrossEncoder
 from dotenv import load_dotenv, find_dotenv
+_ = load_dotenv(find_dotenv()) 
 import os
 import pandas as pd
 import time
-import warnings
-warnings.filterwarnings("ignore")
+import sys
+import errno
+import pickle
+# import warnings
+# warnings.filterwarnings("ignore")
 
 top_n = 5
 recall_n = 30
 distance = "l2"
 batch_size = 12
-
+num_workers = None
+search_strategy = "hnsw"
 vec_db_shule = ShuleVectorDB(space=distance,
                              batch_size=batch_size)
-_ = load_dotenv(find_dotenv()) 
-rerank_model = CrossEncoder(os.getenv('RERANK_MODEL_PATH'))
-
-
+rerank_model = CrossEncoder(os.getenv('RERANK_MODEL_PATH')) if search_strategy == "rerank" else None
 # def init_db_pdf(file):
 #     print("---init database---")
 #     paragraphs, pages = extract_text_from_pdf_pdfplumber_with_pages(file.name)
@@ -36,7 +38,7 @@ rerank_model = CrossEncoder(os.getenv('RERANK_MODEL_PATH'))
 
 # load data from ./corpus
 def init_db_local():
-    print("---init database begin---")
+    print("---init local database begin---")
     corpus_path = os.getenv('CORPUS_PATH')
     
     # # paper 
@@ -58,8 +60,8 @@ def init_db_local():
         # larger intersect
         documents, pages_matched = split_text_with_pages(paragraphs, pages, 400, 100)
         context = os.path.splitext(pdf_file)[0].split('_')
-        pd.DataFrame({"documents": documents,
-                     "pages_matched": pages_matched}).to_csv("tmp.csv")
+        # pd.DataFrame({"documents": documents,
+        #              "pages_matched": pages_matched}).to_csv("tmp.csv")
         vec_db_shule.add_documents_dense(type="report",
                                        texts=documents, 
                                        pages=pages_matched,
@@ -67,11 +69,21 @@ def init_db_local():
                                        year=context[2],
                                        country=context[1],
                                        ORG=context[0])
-    print("---init database finish---")
- 
+    print("---init database end---")
+    vec_db_shule.dump()
+    print("---ShuleVectorDB dump end---")
+
+def init_db_load_index(index_path):
+    global vec_db_shule
+    print("---init database by index file begin---")
+    print("index path: ", index_path)
+    with open(index_path, 'rb') as file:
+        vec_db_shule = pickle.load(file)
+    
+    print("---init database by index file end---")
     
 # search = (hnsw, rerank, fusion)
-def chat(user_input, chatbot, context, search_field, search_strategy = "rerank"):
+def chat(user_input, chatbot, context, search_field):
     print("---chat button---")
     search_results = []
     
@@ -109,7 +121,9 @@ def rerank(user_input, top_n=5, recall_n=30, verbose=True):
     texts, pages, titles, years, countries, ORGs = vec_db_shule.get_context_by_labels(search_labels)
     t1 = time.time()
     if verbose: print("vec_db_shule.get_context_by_labels costs: ", t1 - t0)
-    scores = rerank_model.predict([(user_input, doc) for doc in texts])
+    scores = rerank_model.predict([(user_input, doc) for doc in texts],
+                                  batch_size=batch_size,
+                                  show_progress_bar=True)
     t2 = time.time()
     if verbose: print("rerank_model.predict costs: ", t2 - t0)
     print()
@@ -156,9 +170,17 @@ def main():
 
         # fileCtrl.upload(init_db_pdf, inputs=[fileCtrl])
 
-    demo.queue().launch(share=True, server_name='0.0.0.0', server_port=8889, inbrowser=True)
+    demo.queue().launch(share=False, server_name='0.0.0.0', server_port=8889, inbrowser=True)
 
-
+def init():
+    index_path = sys.argv[1] if len(sys.argv) > 1 else None
+    if index_path == None:
+        init_db_local()
+    elif os.path.exists(index_path):
+        init_db_load_index(index_path)
+    else:
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), index_path)
+    
 if __name__ == "__main__":
-    init_db_local()
+    init()
     main()
