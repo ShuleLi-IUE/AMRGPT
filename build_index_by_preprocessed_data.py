@@ -37,6 +37,7 @@ def init_db_local():
     # report pdf
     print("local database of report initing...") 
     pdf_files = [file for file in os.listdir(corpus_path) if file.endswith('.csv')]
+    pdf_files.sort()
     for file_name in pdf_files:
         t0 = time.time()
         match = re.match(r"^(\d+)\.\s(.+)\.csv", file_name)
