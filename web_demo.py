@@ -170,7 +170,7 @@ def main():
 
         # fileCtrl.upload(init_db_pdf, inputs=[fileCtrl])
 
-    demo.queue().launch(share=False, server_name='0.0.0.0', server_port=8889, inbrowser=True)
+    demo.queue().launch(share=False, server_name='0.0.0.0', server_port=8889, inbrowser=False)
 
 def init():
     index_path = sys.argv[1] if len(sys.argv) > 1 else None
