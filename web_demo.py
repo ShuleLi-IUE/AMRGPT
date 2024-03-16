@@ -16,6 +16,7 @@ import time
 import sys
 import errno
 import pickle
+from logger import log_info, log_debug, log_warning
 # import warnings
 # warnings.filterwarnings("ignore")
 
@@ -38,7 +39,7 @@ rerank_model = CrossEncoder(os.getenv('RERANK_MODEL_PATH')) if search_strategy =
 
 # load data from ./corpus
 def init_db_local():
-    print("---init local database begin---")
+    log_info("---init local database begin---")
     corpus_path = os.getenv('CORPUS_PATH')
     
     # # paper 
@@ -53,7 +54,7 @@ def init_db_local():
     #                                    source=df["DOI"][i])
     
     # report pdf
-    print("local database of report initing...") 
+    log_info("local database of report initing...") 
     pdf_files = [file for file in os.listdir(corpus_path) if file.endswith('.pdf')]
     for pdf_file in pdf_files:
         paragraphs, pages = extract_text_from_pdf_pdfplumber_with_pages(os.path.join(corpus_path, pdf_file))
@@ -69,67 +70,68 @@ def init_db_local():
                                        year=context[2],
                                        country=context[1],
                                        ORG=context[0])
-    print("---init database end---")
+    log_info("---init database end---")
     vec_db_shule.dump()
-    print("---ShuleVectorDB dump end---")
+    log_info("---ShuleVectorDB dump end---")
 
 def init_db_load_index(index_path):
     global vec_db_shule
-    print("---init database by index file begin---")
-    print("index path: ", index_path)
+    log_info("---init database by index file begin---")
+    log_info(f"index path: {index_path}")
     with open(index_path, 'rb') as file:
         vec_db_shule = pickle.load(file)
     
-    print("---init database by index file end---")
+    log_info("---init database by index file end---")
     
 # search = (hnsw, rerank, fusion)
 def chat(user_input, chatbot, context, search_field):
-    print("---chat button---")
+    log_info("---chat button---")
     search_results = []
     
     if search_strategy == "hnsw":
+        log_info("===hnsw===")
         search_labels = vec_db_shule.search_bge(user_input, top_n)
         texts, pages, titles, years, countries, ORGs = vec_db_shule.get_context_by_labels(search_labels)
         search_field = "\n\n".join([f"{i+1}. [Reference: {titles[i]}, Page: {pages[i]}, ORG: {ORGs[i]}, Year: {years[i]}]\n{texts[i]}" for i in range(top_n)])
         prompt = build_prompt(info=[f"{texts[i]} [Reference: Page {pages[i]}, {titles[i]}, {years[i]}, {ORGs[i]}]" for i in range(top_n)], query=user_input)
         
     elif search_strategy == "rerank":
-        print("===rerank===")
+        log_info("===rerank===")
         search_results = rerank(user_input, top_n, recall_n)
         search_field = "\n\n".join([f"{index+1}. [Reference: {item[2]}, Page: {item[5]}, ORG: {item[6]}, Year: {item[3]}]\n(Score: {item[0]:.2e}) {item[1]}" for index, item in enumerate(search_results)])
         prompt = build_prompt(info=[f"{item[1]} [Reference: Page {item[5]}, {item[2]}, {item[3]}, {item[6]}]" for item in search_results], query=user_input)
         
     elif search_strategy == "fusion":
-        print("Not support yet.")
+        log_warning("Not support yet.")
+        return
             
-    print("prompt content built:\n", prompt)
+    log_info(f"prompt content built:\n{prompt}")
     
-    print("===get completion===")
+    log_info("===get completion===")
     t0 = time.time()
     response = get_completion_openai(prompt, context)
-    print("get_completion_openai costs", time.time() - t0)
-    print("completion content:\n", response)
+    log_info(f"get_completion_openai costs, {time.time() - t0}")
+    log_info(f"completion content:\n{response}")
     
     chatbot.append((user_input, response))
     context.append({'role': 'user', 'content': user_input})
     context.append({'role': 'assistant', 'content': response})
     return "", chatbot, context, search_field
 
-def rerank(user_input, top_n=5, recall_n=30, verbose=True):
+def rerank(user_input, top_n=5, recall_n=30):
     search_labels = vec_db_shule.search_bge(user_input, recall_n)
     t0 = time.time()
     texts, pages, titles, years, countries, ORGs = vec_db_shule.get_context_by_labels(search_labels)
     t1 = time.time()
-    if verbose: print("vec_db_shule.get_context_by_labels costs: ", t1 - t0)
+    log_info(f"vec_db_shule.get_context_by_labels costs: {t1 - t0}")
     scores = rerank_model.predict([(user_input, doc) for doc in texts],
                                   batch_size=batch_size,
                                   show_progress_bar=True)
     t2 = time.time()
-    if verbose: print("rerank_model.predict costs: ", t2 - t0)
-    print()
+    log_info(f"rerank_model.predict costs: {t2 - t0}")
+    
     sorted_list = sorted(zip(scores, texts, titles, years, countries, pages, ORGs), key=lambda x: x[0], reverse=True)
-    if verbose:
-        print(f"finish rerank {len(sorted_list)} texts, return highest {top_n} texts")
+    log_info(f"finish rerank {len(sorted_list)} texts, return highest {top_n} texts")
     # for score, doc in sorted_list:
     #     print(f"{score}\t{doc}\n")
     return sorted_list[:top_n]
@@ -137,12 +139,12 @@ def rerank(user_input, top_n=5, recall_n=30, verbose=True):
 
 
 def reset_state():
-    print("---reset state---")
+    log_info("---reset state---")
     return [], [], "", ""
 
 
 def main():
-    print("===begin gradio===")
+    log_info("===begin gradio===")
     with gr.Blocks() as demo:
         gr.HTML("""<h1 align="center">AMRGPT</h1>
                    <h3 align="center">Zhu Lab</h3>""")
