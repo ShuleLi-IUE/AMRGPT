@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 import gradio as gr
-from openai_utils import get_completion_openai
+from openai_utils import get_completion_openai, init_openai
 from prompt_utils import build_prompt
 from pdf_utils import  extract_text_from_pdf_pdfplumber_with_pages
 from text_utils import split_text, split_text_with_pages
@@ -76,6 +76,7 @@ def init_db_local():
 
 def init_db_load_index(index_path):
     global vec_db_shule
+    init_openai()
     log_info("---init database by index file begin---")
     log_info(f"index path: {index_path}")
     with open(index_path, 'rb') as file:
@@ -108,9 +109,7 @@ def chat(user_input, chatbot, context, search_field):
     log_info(f"prompt content built:\n{prompt}")
     
     log_info("===get completion===")
-    t0 = time.time()
     response = get_completion_openai(prompt, context)
-    log_info(f"get_completion_openai costs, {time.time() - t0}")
     log_info(f"completion content:\n{response}")
     
     chatbot.append((user_input, response))
