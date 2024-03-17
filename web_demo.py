@@ -21,7 +21,7 @@ from logger import log_info, log_debug, log_warning
 # warnings.filterwarnings("ignore")
 
 top_n = 5
-recall_n = 30
+recall_n = 50
 distance = "l2"
 batch_size = 12
 num_workers = None
@@ -117,23 +117,34 @@ def chat(user_input, chatbot, context, search_field):
     context.append({'role': 'assistant', 'content': response})
     return "", chatbot, context, search_field
 
-def rerank(user_input, top_n=5, recall_n=30):
+def rerank(user_input, top_n, recall_n):
     search_labels = vec_db_shule.search_bge(user_input, recall_n)
     t0 = time.time()
     texts, pages, titles, years, countries, ORGs = vec_db_shule.get_context_by_labels(search_labels)
     t1 = time.time()
     log_info(f"vec_db_shule.get_context_by_labels costs: {t1 - t0}")
-    scores = rerank_model.predict([(user_input, doc) for doc in texts],
-                                  batch_size=batch_size,
-                                  show_progress_bar=True)
+
+    documents = [texts[i] if countries[i] == 'xxx' else f'In {countries[i]}, {texts[i]}' for i in range(len(pages))]
+    res = rerank_model.rank(documents = documents,
+                            query=user_input,
+                            batch_size = 1,
+                            return_documents = False)
     t2 = time.time()
-    log_info(f"rerank_model.predict costs: {t2 - t0}")
+    log_info(f"rerank_model.predict costs: {t2 - t1}")
     
-    sorted_list = sorted(zip(scores, texts, titles, years, countries, pages, ORGs), key=lambda x: x[0], reverse=True)
+    ids = [i['corpus_id'] for i in res][:top_n]
+
+    sorted_list = zip([scpres[i] for i in ids], 
+                       [texts[i] for i in ids], 
+                       [titles[i] for i in ids], 
+                       [years[i] for i in ids], 
+                       [countries[i] for i in ids], 
+                       [pages[i] for i in ids], 
+                       [ORGs[i] for i in ids])
     log_info(f"finish rerank {len(sorted_list)} texts, return highest {top_n} texts")
     # for score, doc in sorted_list:
     #     print(f"{score}\t{doc}\n")
-    return sorted_list[:top_n]
+    return sorted_list
     # return [item[1] for item in sorted_list[:top_n]]
 
 
