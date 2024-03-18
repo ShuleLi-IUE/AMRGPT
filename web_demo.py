@@ -20,12 +20,12 @@ from logger import log_info, log_debug, log_warning
 # import warnings
 # warnings.filterwarnings("ignore")
 
-top_n = 5
-recall_n = 50
+top_n = 8
+recall_n = 80
 distance = "l2"
 batch_size = 12
 num_workers = None
-search_strategy = "hnsw"
+search_strategy = "rerank"
 vec_db_shule = ShuleVectorDB(space=distance,
                              batch_size=batch_size)
 rerank_model = CrossEncoder(os.getenv('RERANK_MODEL_PATH')) if search_strategy == "rerank" else None
@@ -93,14 +93,18 @@ def chat(user_input, chatbot, context, search_field):
         log_info("===hnsw===")
         search_labels = vec_db_shule.search_bge(user_input, top_n)
         texts, pages, titles, years, countries, ORGs = vec_db_shule.get_context_by_labels(search_labels)
+        res = [texts[i] if countries[i] == 'xxx' else f'In {countries[i]}, {texts[i]}' for i in range(top_n)]
+
         search_field = "\n\n".join([f"{i+1}. [Reference: {titles[i]}, Page: {pages[i]}, ORG: {ORGs[i]}, Year: {years[i]}]\n{texts[i]}" for i in range(top_n)])
-        prompt = build_prompt(info=[f"{texts[i]} [Reference: Page {pages[i]}, {titles[i]}, {years[i]}, {ORGs[i]}]" for i in range(top_n)], query=user_input)
+        prompt = build_prompt(info=[f"{res[i]} [Reference: Page {pages[i]}, {titles[i]}, {years[i]}, {ORGs[i]}]" for i in range(top_n)], query=user_input)
         
     elif search_strategy == "rerank":
         log_info("===rerank===")
-        search_results = rerank(user_input, top_n, recall_n)
-        search_field = "\n\n".join([f"{index+1}. [Reference: {item[2]}, Page: {item[5]}, ORG: {item[6]}, Year: {item[3]}]\n(Score: {item[0]:.2e}) {item[1]}" for index, item in enumerate(search_results)])
-        prompt = build_prompt(info=[f"{item[1]} [Reference: Page {item[5]}, {item[2]}, {item[3]}, {item[6]}]" for item in search_results], query=user_input)
+        scores, texts, pages, titles, years, countries, ORGs = rerank(user_input, top_n, recall_n)
+        res = [texts[i] if countries[i] == 'xxx' else f'In {countries[i]}, {texts[i]}' for i in range(top_n)]
+
+        search_field = "\n\n".join([f"{i+1}. [Reference: {titles[i]}, Page: {pages[i]}, ORG: {ORGs[i]}, Year: {years[i]}]\n{texts[i]}" for i in range(top_n)])
+        prompt = build_prompt(info=[f"{res[i]} [Reference: Page {pages[i]}, {titles[i]}, {years[i]}, {ORGs[i]}]" for i in range(top_n)], query=user_input)
         
     elif search_strategy == "fusion":
         log_warning("Not support yet.")
@@ -133,18 +137,19 @@ def rerank(user_input, top_n, recall_n):
     log_info(f"rerank_model.predict costs: {t2 - t1}")
     
     ids = [i['corpus_id'] for i in res][:top_n]
+    scores = [i['score'] for i in res][:top_n]
 
-    sorted_list = zip([scpres[i] for i in ids], 
-                       [texts[i] for i in ids], 
-                       [titles[i] for i in ids], 
-                       [years[i] for i in ids], 
-                       [countries[i] for i in ids], 
-                       [pages[i] for i in ids], 
-                       [ORGs[i] for i in ids])
-    log_info(f"finish rerank {len(sorted_list)} texts, return highest {top_n} texts")
+    # sorted_list = {'scores': scores, 
+    #                 'texts': [texts[i] for i in ids], 
+    #                 'titles':[titles[i] for i in ids], 
+    #                 'years':[years[i] for i in ids], 
+    #                 'countries':[countries[i] for i in ids], 
+    #                 'pages':[pages[i] for i in ids], 
+    #                 'ORGs':[ORGs[i] for i in ids]}
+    log_info(f"finish rerank {recall_n} texts, return highest {top_n} texts")
     # for score, doc in sorted_list:
     #     print(f"{score}\t{doc}\n")
-    return sorted_list
+    return scores, [texts[i] for i in ids], [pages[i] for i in ids], [titles[i] for i in ids], [years[i] for i in ids], [countries[i] for i in ids], [ORGs[i] for i in ids]
     # return [item[1] for item in sorted_list[:top_n]]
 
 
@@ -156,7 +161,7 @@ def reset_state():
 def main():
     log_info("===begin gradio===")
     with gr.Blocks() as demo:
-        gr.HTML("""<h1 align="center">AMRGPT</h1>
+        gr.HTML("""<h1 align="center">Liuhui-bot for AMR</h1>
                    <h3 align="center">Zhu Lab</h3>""")
 
         # with gr.Row():
@@ -182,7 +187,7 @@ def main():
 
         # fileCtrl.upload(init_db_pdf, inputs=[fileCtrl])
 
-    demo.queue().launch(share=False, server_name='0.0.0.0', server_port=8889, inbrowser=False)
+    demo.queue().launch(share=False, server_name='0.0.0.0', server_port=8889, inbrowser=False, show_api=False)
 
 def init():
     index_path = sys.argv[1] if len(sys.argv) > 1 else None
