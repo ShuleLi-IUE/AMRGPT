@@ -140,7 +140,7 @@ def build_doc_for_country(country: str):
 
             document.add_paragraph().paragraph_format.space_after = 0
             
-    document.save(f'./generated_docs/Evaluation_HandBook_{country}.docx')
+        document.save(f'./generated_docs/Evaluation_HandBook_{country}.docx')
     log_info(f"{country} costs: {time.time() - t0}")
                 
 def main():

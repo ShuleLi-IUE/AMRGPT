@@ -5,7 +5,6 @@ from openai_utils import get_completion_openai, init_openai
 from prompt_utils import build_prompt
 from pdf_utils import  extract_text_from_pdf_pdfplumber_with_pages
 from text_utils import split_text, split_text_with_pages
-from rerank_utils import rerank
 from vectordb_utils_shule import ShuleVectorDB
 from sentence_transformers import CrossEncoder
 from dotenv import load_dotenv, find_dotenv
