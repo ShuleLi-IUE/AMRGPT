@@ -6,3 +6,5 @@ __pycache__/
 OHJPA-5-3.pdf
 llama2-extracted.pdf
 requirements.txt
+*.out
+*.log

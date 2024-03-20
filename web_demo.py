@@ -84,7 +84,7 @@ def init_db_load_index(index_path):
     log_info("---init database by index file end---")
     
 # search = (hnsw, rerank, fusion)
-def chat(user_input, chatbot, context, search_field):
+def search_db(user_input, chatbot, context, search_field):
     log_info("---chat button---")
     search_results = []
     
@@ -110,15 +110,8 @@ def chat(user_input, chatbot, context, search_field):
         return
             
     log_info(f"prompt content built:\n{prompt}")
-    
-    log_info("===get completion===")
-    response = get_completion_openai(prompt, context)
-    log_info(f"completion content:\n{response}")
-    
-    chatbot.append((user_input, response))
-    context.append({'role': 'user', 'content': user_input})
-    context.append({'role': 'assistant', 'content': response})
-    return "", chatbot, context, search_field
+    return prompt, search_field
+
 
 def rerank(user_input, top_n, recall_n):
     search_labels = vec_db_shule.search_bge(user_input, recall_n)
@@ -180,8 +173,44 @@ def main():
 
         context = gr.State([])
 
-        submitBtn.click(chat, [user_input, chatbot, context, search_field],
-                        [user_input, chatbot, context, search_field])
+        def user(user_message, history):
+            return user_message, history + [[user_message, None]]
+        
+        def bot2(user_input, chatbot, context, search_field):
+            prompt, search_field = search_db(user_input, chatbot, context, search_field)
+            
+            # clear user input
+            user_input = ""
+
+            # print("prompt and search_field:", prompt, search_field)
+            log_info("===get completion===")
+            response_stream = get_completion_openai(prompt, context)
+            response = ""
+            chatbot[-1][1] = ""
+            for word in response_stream:
+                chatbot[-1][1] += word
+                response += word
+                yield user_input, chatbot, context, ""
+            
+            context.append({'role': 'user', 'content': user_input})
+            context.append({'role': 'assistant', 'content': response})
+            log_info(f"completion content:\n{response}")
+
+            # response is empty, lead to a error in gradio
+            # put a netword error to client
+            if chatbot[-1][1] == "":
+                chatbot[-1][1] += "Network Error. Wait seconds and try again."
+                search_field = ""
+            
+            yield user_input, chatbot, context, search_field
+
+        submitBtn.click(user, [user_input, chatbot],
+                        [user_input, chatbot], queue=False
+                        ).then(
+                            bot2, 
+                            [user_input, chatbot, context, search_field], 
+                            [user_input, chatbot, context, search_field]
+                        )
         emptyBtn.click(reset_state, outputs=[chatbot, context, user_input, search_field])
 
         # fileCtrl.upload(init_db_pdf, inputs=[fileCtrl])
