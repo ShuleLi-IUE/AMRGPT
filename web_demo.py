@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 import gradio as gr
-from openai_utils import get_completion_openai, init_openai
+from openai_utils import get_completion_openai, init_openai, get_completion_openai_stream
 from prompt_utils import build_prompt
 from pdf_utils import  extract_text_from_pdf_pdfplumber_with_pages
 from text_utils import split_text, split_text_with_pages
@@ -184,7 +184,7 @@ def main():
 
             # print("prompt and search_field:", prompt, search_field)
             log_info("===get completion===")
-            response_stream = get_completion_openai(prompt, context)
+            response_stream = get_completion_openai_stream(prompt, context)
             response = ""
             chatbot[-1][1] = ""
             for word in response_stream:
