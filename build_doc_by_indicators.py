@@ -19,11 +19,11 @@ from docx.shared import Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.shared import Pt
 
-top_n = 30
+top_n = 40
 show_n = 8
-recall_n = 120
-select_questions = [0, 1, 2] # None for all questions
-countries = ["South Asia"]
+recall_n = 200
+select_questions = None # None for all questions
+countries = ["Europe", "Western Pacific"]
 
 search_strategy = "rerank"
 vec_db_shule = None
@@ -127,20 +127,22 @@ def build_doc_for_country(country: str):
         
         p_ref = document.add_paragraph('Reference', style='Intense Quote')
         p_ref.paragraph_format.left_indent = 0
-        for i in range(show_n):
-            p = document.add_paragraph(f'{ORGs[i]}. ({years[i]}). ')
-            p.add_run(titles[i]).italic = True
-            p.add_run(f". Page {pages[i]}.")
+        for j in range(show_n):
+            p = document.add_paragraph(f'{ORGs[j]}. ({years[j]}). ')
+            p.add_run(titles[j]).italic = True
+            p.add_run(f". Page {pages[j]}.")
             p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
             p.paragraph_format.space_after = Pt(6) 
 
-            p2 = document.add_paragraph(texts[i])
+            p2 = document.add_paragraph(texts[j])
             p2.paragraph_format.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
             p2.paragraph_format.space_after = Pt(6) 
 
             document.add_paragraph().paragraph_format.space_after = 0
-            
+        
         document.save(f'./generated_docs/Evaluation_HandBook_{country}.docx')
+        log_info(f"Q{i} finished & saved")
+        
     log_info(f"{country} costs: {time.time() - t0}")
                 
 def main():

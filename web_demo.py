@@ -152,31 +152,38 @@ def reset_state():
 
 def main():
     log_info("===begin gradio===")
-    with gr.Blocks() as demo:
-        gr.HTML("""<h1 align="center">Liuhui-bot for AMR</h1>
-                   <h3 align="center">Zhu Lab</h3>""")
+    with gr.Blocks(css="web_css.css") as demo:
+        gr.HTML("""<h1 align="center">Liuhui-bot</h1>
+                    <h3 align="center">for AMR policy</h3>
+                   """)
 
-        # with gr.Row():
-        #     with gr.Column():
-        #         fileCtrl = gr.File(label="Upload file", file_types=[',pdf'])
+        
+        with gr.Row() as output_field:
+            with gr.Column() as chat_col:
+                chatbot = gr.Chatbot(height=450, show_label=True, label="Chatbot")
+            with gr.Column() as ref_col:
+                # search_field = gr.Textbox(show_label=False, placeholder="Reference...", lines=14)
+                search_field = gr.TextArea(show_label=True, label="Reference", placeholder="Reference...", elem_classes="box_height", container=False, lines=50)
 
-        with gr.Row():
-            with gr.Column(scale=2):
-                chatbot = gr.Chatbot(height = 520)
-            with gr.Column(scale=2):
-                              
+        with gr.Column(elem_classes=".input_field") as input_field:
+            with gr.Row(elem_classes=".dropdown_group"):
+                model = gr.Dropdown(label="model", choices=["GPT-3.5", "GPT-4"], value=0, filterable=False, min_width=50)
+                source = gr.Dropdown(label="source", choices=["Hybrid", "Only Database"], value=0, filterable=False)
+                mode = gr.Dropdown(label="mode", choices=["Accuracy", "Efficiency"], value=0, filterable=False)
+            with gr.Row():
                 user_input = gr.Textbox(show_label=False, placeholder="Enter your questions about AMR...", lines=3)
-                with gr.Row():
-                    submitBtn = gr.Button("Submit", variant="primary")
-                    emptyBtn = gr.Button("Clear")
-                search_field = gr.Textbox(show_label=False, placeholder="Reference...", lines=14)
+            with gr.Row():
+                submitBtn = gr.Button("Submit", variant="primary")
+                emptyBtn = gr.Button("Clear")
 
+        gr.HTML("""<div class="at_bottom">Developed by Zhu Lab</div>""")
         context = gr.State([])
 
         def user(user_message, history):
             return user_message, history + [[user_message, None]]
         
-        def bot2(user_input, chatbot, context, search_field):
+        def bot2(user_input, chatbot, context, search_field, model, source, mode):
+            print(user_input, model, source, mode)
             prompt, search_field = search_db(user_input, chatbot, context, search_field)
             
             # clear user input
@@ -208,14 +215,14 @@ def main():
                         [user_input, chatbot], queue=False
                         ).then(
                             bot2, 
-                            [user_input, chatbot, context, search_field], 
+                            [user_input, chatbot, context, search_field, model, source, mode], 
                             [user_input, chatbot, context, search_field]
                         )
         emptyBtn.click(reset_state, outputs=[chatbot, context, user_input, search_field])
 
         # fileCtrl.upload(init_db_pdf, inputs=[fileCtrl])
 
-    demo.queue().launch(share=False, server_name='0.0.0.0', server_port=8889, inbrowser=False, show_api=False)
+    demo.queue().launch(share=False, server_name='0.0.0.0', server_port=8888, inbrowser=False, show_api=False)
 
 def init():
     index_path = sys.argv[1] if len(sys.argv) > 1 else None
