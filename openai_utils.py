@@ -15,13 +15,13 @@ def init_openai():
     client = OpenAI()
 
     
-def get_completion_openai(prompt, context, model="gpt-3.5-turbo"):
+def get_completion_openai(prompt, context, model="GPT-4"):
     """封装 openai 接口"""
     t0 = time.time()
     messages = context + [{"role": "user", "content": prompt}]
     response_stream = client.chat.completions.create(
         # model=model,
-        model="gpt-4-turbo-preview", 
+        model="gpt-4-turbo-preview" if model == "GPT-4" else "gpt-3.5-turbo", 
         # "gpt-4"
         messages=messages,
         temperature=0,  # 模型输出的随机性，0 表示随机性最小

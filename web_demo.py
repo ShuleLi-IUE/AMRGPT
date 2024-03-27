@@ -84,26 +84,26 @@ def init_db_load_index(index_path):
     log_info("---init database by index file end---")
     
 # search = (hnsw, rerank, fusion)
-def search_db(user_input, chatbot, context, search_field):
+def search_db(user_input, chatbot, context, search_field, source_type, mode_type):
     log_info("---chat button---")
     search_results = []
     
-    if search_strategy == "hnsw":
+    if search_strategy == "hnsw" or mode_type == "Efficiency":
         log_info("===hnsw===")
         search_labels = vec_db_shule.search_bge(user_input, top_n)
         texts, pages, titles, years, countries, ORGs = vec_db_shule.get_context_by_labels(search_labels)
         res = [texts[i] if countries[i] == 'xxx' else f'In {countries[i]}, {texts[i]}' for i in range(top_n)]
 
         search_field = "\n\n".join([f"{i+1}. [Reference: {titles[i]}, Page: {pages[i]}, ORG: {ORGs[i]}, Year: {years[i]}]\n{texts[i]}" for i in range(top_n)])
-        prompt = build_prompt(info=[f"{res[i]} [Reference: Page {pages[i]}, {titles[i]}, {years[i]}, {ORGs[i]}]" for i in range(top_n)], query=user_input)
+        prompt = build_prompt(source_type=source_type, info=[f"{res[i]} [Reference: Page {pages[i]}, {titles[i]}, {years[i]}, {ORGs[i]}]" for i in range(top_n)], query=user_input)
         
-    elif search_strategy == "rerank":
+    elif search_strategy == "rerank" or mode_type == "Accuracy":
         log_info("===rerank===")
         scores, texts, pages, titles, years, countries, ORGs = rerank(user_input, top_n, recall_n)
         res = [texts[i] if countries[i] == 'xxx' else f'In {countries[i]}, {texts[i]}' for i in range(top_n)]
 
         search_field = "\n\n".join([f"{i+1}. [Reference: {titles[i]}, Page: {pages[i]}, ORG: {ORGs[i]}, Year: {years[i]}]\n{texts[i]}" for i in range(top_n)])
-        prompt = build_prompt(info=[f"{res[i]} [Reference: Page {pages[i]}, {titles[i]}, {years[i]}, {ORGs[i]}]" for i in range(top_n)], query=user_input)
+        prompt = build_prompt(source_type=source_type, info=[f"{res[i]} [Reference: Page {pages[i]}, {titles[i]}, {years[i]}, {ORGs[i]}]" for i in range(top_n)], query=user_input)
         
     elif search_strategy == "fusion":
         log_warning("Not support yet.")
@@ -167,9 +167,9 @@ def main():
 
         with gr.Column(elem_classes=".input_field") as input_field:
             with gr.Row(elem_classes=".dropdown_group"):
-                model = gr.Dropdown(label="model", choices=["GPT-3.5", "GPT-4"], value=0, filterable=False, min_width=50)
-                source = gr.Dropdown(label="source", choices=["Hybrid", "Only Database"], value=0, filterable=False)
-                mode = gr.Dropdown(label="mode", choices=["Accuracy", "Efficiency"], value=0, filterable=False)
+                model = gr.Dropdown(label="Model", choices=["GPT-4", "GPT-3.5"], value=0, filterable=False, min_width=50)
+                source = gr.Dropdown(label="Source", choices=["Hybrid", "Standalone"], value=0, filterable=False)
+                mode = gr.Dropdown(label="Mode", choices=["Accuracy", "Efficiency"], value=0, filterable=False)
             with gr.Row():
                 user_input = gr.Textbox(show_label=False, placeholder="Enter your questions about AMR...", lines=3)
             with gr.Row():
@@ -183,15 +183,16 @@ def main():
             return user_message, history + [[user_message, None]]
         
         def bot2(user_input, chatbot, context, search_field, model, source, mode):
-            print(user_input, model, source, mode)
-            prompt, search_field = search_db(user_input, chatbot, context, search_field)
+            print(model, source, mode, user_input)
+            log_info(f"model: {model}, source: {source}, mode: {mode}\nuser_input:{user_input}")
+            prompt, search_field = search_db(user_input, chatbot, context, search_field, source, mode)
             
             # clear user input
             user_input = ""
 
             # print("prompt and search_field:", prompt, search_field)
             log_info("===get completion===")
-            response_stream = get_completion_openai(prompt, context)
+            response_stream = get_completion_openai(prompt, context, model)
             response = ""
             chatbot[-1][1] = ""
             for word in response_stream:
