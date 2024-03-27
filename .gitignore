@@ -8,3 +8,4 @@ llama2-extracted.pdf
 requirements.txt
 *.out
 *.log
+generated_docs/
