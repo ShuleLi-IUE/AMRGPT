@@ -86,7 +86,6 @@ def init_db_load_index(index_path):
 # search = (hnsw, rerank, fusion)
 def search_db(user_input, chatbot, context, search_field, source_type, mode_type):
     log_info("---chat button---")
-    search_results = []
     
     if search_strategy == "hnsw" or mode_type == "Efficiency":
         log_info("===hnsw===")
@@ -124,7 +123,8 @@ def rerank(user_input, top_n, recall_n):
     res = rerank_model.rank(documents = documents,
                             query=user_input,
                             batch_size = 1,
-                            return_documents = False)
+                            return_documents = False,
+                            show_progress_bar = False)
     t2 = time.time()
     log_info(f"rerank_model.predict costs: {t2 - t1}")
     
@@ -167,9 +167,10 @@ def main():
 
         with gr.Column(elem_classes=".input_field") as input_field:
             with gr.Row(elem_classes=".dropdown_group"):
-                model = gr.Dropdown(label="Model", choices=["GPT-4", "GPT-3.5"], value=0, filterable=False, min_width=50)
-                source = gr.Dropdown(label="Source", choices=["Hybrid", "Standalone"], value=0, filterable=False)
-                mode = gr.Dropdown(label="Mode", choices=["Accuracy", "Efficiency"], value=0, filterable=False)
+                model = gr.Dropdown(label="Model", choices=["GPT-3.5", "GPT-4"], value="GPT-4", filterable=False, min_width=50)
+                source = gr.Dropdown(label="Source", choices=["Hybrid", "Standalone"], value="Hybrid", filterable=False)
+                mode = gr.Dropdown(label="Mode", choices=["Accuracy", "Efficiency"], value="Accuracy", filterable=False)
+                history = gr.Dropdown(label="History", choices=["Yes", "No"], value="Yes", filterable=False)
             with gr.Row():
                 user_input = gr.Textbox(show_label=False, placeholder="Enter your questions about AMR...", lines=3)
             with gr.Row():
@@ -182,9 +183,9 @@ def main():
         def user(user_message, history):
             return user_message, history + [[user_message, None]]
         
-        def bot2(user_input, chatbot, context, search_field, model, source, mode):
-            print(model, source, mode, user_input)
-            log_info(f"model: {model}, source: {source}, mode: {mode}\nuser_input:{user_input}")
+        def bot2(user_input, chatbot, context, search_field, model, source, mode, history):
+            print(model, source, mode, history, user_input)
+            log_info(f"model: {model}, source: {source}, mode: {mode}, history: {history}\nuser_input:{user_input}")
             prompt, search_field = search_db(user_input, chatbot, context, search_field, source, mode)
             
             # clear user input
@@ -192,7 +193,7 @@ def main():
 
             # print("prompt and search_field:", prompt, search_field)
             log_info("===get completion===")
-            response_stream = get_completion_openai_stream(prompt, context)
+            response_stream = get_completion_openai_stream(prompt, context, model, history)
             response = ""
             chatbot[-1][1] = ""
             for word in response_stream:
@@ -216,14 +217,14 @@ def main():
                         [user_input, chatbot], queue=False
                         ).then(
                             bot2, 
-                            [user_input, chatbot, context, search_field, model, source, mode], 
+                            [user_input, chatbot, context, search_field, model, source, mode, history], 
                             [user_input, chatbot, context, search_field]
                         )
         emptyBtn.click(reset_state, outputs=[chatbot, context, user_input, search_field])
 
         # fileCtrl.upload(init_db_pdf, inputs=[fileCtrl])
 
-    demo.queue().launch(share=False, server_name='0.0.0.0', server_port=8888, inbrowser=False, show_api=False)
+    demo.queue().launch(share=False, server_name='0.0.0.0', server_port=8889, inbrowser=False, show_api=False)
 
 def init():
     index_path = sys.argv[1] if len(sys.argv) > 1 else None
