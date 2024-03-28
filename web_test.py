@@ -17,9 +17,9 @@ if (footerElement) {
 
 def UI1():
     with gr.Blocks(css="web_css.css") as demo:
-        gr.HTML("""<h1 align="center">Liuhui-bot</h1>
-                    <h3 align="center">for AMR policy</h3>
-                   """)
+        # gr.HTML("""<h1 align="center">Liuhui-bot</h1>
+        #             <h3 align="center">for AMR policy</h3>
+        #            """)
 
         
         with gr.Row() as output_field:
@@ -40,7 +40,7 @@ def UI1():
                 submitBtn = gr.Button("Submit", variant="primary")
                 emptyBtn = gr.Button("Clear")
 
-        gr.HTML("""<div class="at_bottom">Developed by Zhu Lab</div>""")
+        # gr.HTML("""<div class="at_bottom">Developed by Zhu Lab</div>""")
         context = gr.State([])
 
 
@@ -50,7 +50,7 @@ def UI1():
 
         
 
-    demo.queue().launch(share=False, server_name='0.0.0.0', server_port=8887, inbrowser=False, show_api=False)
+    demo.queue().launch(share=False, server_name='0.0.0.0', server_port=8887, inbrowser=False, show_api=False, inline=True)
 
 
 if __name__ == "__main__":

@@ -153,11 +153,6 @@ def reset_state():
 def main():
     log_info("===begin gradio===")
     with gr.Blocks(css="web_css.css") as demo:
-        gr.HTML("""<h1 align="center">Liuhui-bot</h1>
-                    <h3 align="center">for AMR policy</h3>
-                   """)
-
-        
         with gr.Row() as output_field:
             with gr.Column() as chat_col:
                 chatbot = gr.Chatbot(height=450, show_label=True, label="Chatbot")
@@ -177,7 +172,6 @@ def main():
                 submitBtn = gr.Button("Submit", variant="primary")
                 emptyBtn = gr.Button("Clear")
 
-        gr.HTML("""<div class="at_bottom">Developed by Zhu Lab</div>""")
         context = gr.State([])
 
         def user(user_message, history):
