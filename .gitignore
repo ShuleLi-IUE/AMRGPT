@@ -9,3 +9,5 @@ requirements.txt
 *.out
 *.log
 generated_docs/
+evaluation/
+AMR_GreyLiterature/

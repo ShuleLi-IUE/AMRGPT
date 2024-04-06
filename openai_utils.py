@@ -31,7 +31,7 @@ def get_completion_openai(prompt, context=None, model="GPT-4", history="False"):
     while response.choices == None:
         i += 1
         if (i > 10): return "network failed"
-        print(f"openai failed, retry in 5 seconds...\n\tresponse: {response}")
+        print(f"openai failed, retry in 5 seconds...\n\tmodel: {model_chosen}\nmessages: {messages}")
         time.sleep(5)
         response = client.chat.completions.create(
             # model=model,

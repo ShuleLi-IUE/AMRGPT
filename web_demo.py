@@ -84,26 +84,25 @@ def init_db_load_index(index_path):
     log_info("---init database by index file end---")
     
 # search = (hnsw, rerank, fusion)
-def search_db(user_input, chatbot, context, search_field):
+def search_db(user_input, chatbot, context, search_field, source_type, mode_type):
     log_info("---chat button---")
-    search_results = []
     
-    if search_strategy == "hnsw":
+    if search_strategy == "hnsw" or mode_type == "Efficiency":
         log_info("===hnsw===")
         search_labels = vec_db_shule.search_bge(user_input, top_n)
         texts, pages, titles, years, countries, ORGs = vec_db_shule.get_context_by_labels(search_labels)
         res = [texts[i] if countries[i] == 'xxx' else f'In {countries[i]}, {texts[i]}' for i in range(top_n)]
 
         search_field = "\n\n".join([f"{i+1}. [Reference: {titles[i]}, Page: {pages[i]}, ORG: {ORGs[i]}, Year: {years[i]}]\n{texts[i]}" for i in range(top_n)])
-        prompt = build_prompt(info=[f"{res[i]} [Reference: Page {pages[i]}, {titles[i]}, {years[i]}, {ORGs[i]}]" for i in range(top_n)], query=user_input)
+        prompt = build_prompt(source_type=source_type, info=[f"{res[i]} [Reference: Page {pages[i]}, {titles[i]}, {years[i]}, {ORGs[i]}]" for i in range(top_n)], query=user_input)
         
-    elif search_strategy == "rerank":
+    elif search_strategy == "rerank" or mode_type == "Accuracy":
         log_info("===rerank===")
         scores, texts, pages, titles, years, countries, ORGs = rerank(user_input, top_n, recall_n)
         res = [texts[i] if countries[i] == 'xxx' else f'In {countries[i]}, {texts[i]}' for i in range(top_n)]
 
         search_field = "\n\n".join([f"{i+1}. [Reference: {titles[i]}, Page: {pages[i]}, ORG: {ORGs[i]}, Year: {years[i]}]\n{texts[i]}" for i in range(top_n)])
-        prompt = build_prompt(info=[f"{res[i]} [Reference: Page {pages[i]}, {titles[i]}, {years[i]}, {ORGs[i]}]" for i in range(top_n)], query=user_input)
+        prompt = build_prompt(source_type=source_type, info=[f"{res[i]} [Reference: Page {pages[i]}, {titles[i]}, {years[i]}, {ORGs[i]}]" for i in range(top_n)], query=user_input)
         
     elif search_strategy == "fusion":
         log_warning("Not support yet.")
@@ -124,7 +123,8 @@ def rerank(user_input, top_n, recall_n):
     res = rerank_model.rank(documents = documents,
                             query=user_input,
                             batch_size = 1,
-                            return_documents = False)
+                            return_documents = False,
+                            show_progress_bar = False)
     t2 = time.time()
     log_info(f"rerank_model.predict costs: {t2 - t1}")
     
@@ -152,39 +152,42 @@ def reset_state():
 
 def main():
     log_info("===begin gradio===")
-    with gr.Blocks() as demo:
-        gr.HTML("""<h1 align="center">Liuhui-bot for AMR</h1>
-                   <h3 align="center">Zhu Lab</h3>""")
+    with gr.Blocks(css="web_css.css") as demo:
+        with gr.Row() as output_field:
+            with gr.Column() as chat_col:
+                chatbot = gr.Chatbot(height=450, show_label=True, label="Chatbot")
+            with gr.Column() as ref_col:
+                # search_field = gr.Textbox(show_label=False, placeholder="Reference...", lines=14)
+                search_field = gr.TextArea(show_label=True, label="Reference", placeholder="Reference...", elem_classes="box_height", container=False, lines=50)
 
-        # with gr.Row():
-        #     with gr.Column():
-        #         fileCtrl = gr.File(label="Upload file", file_types=[',pdf'])
-
-        with gr.Row():
-            with gr.Column(scale=2):
-                chatbot = gr.Chatbot(height = 520)
-            with gr.Column(scale=2):
-                              
+        with gr.Column(elem_classes=".input_field") as input_field:
+            with gr.Row(elem_classes=".dropdown_group"):
+                model = gr.Dropdown(label="Model", choices=["GPT-3.5", "GPT-4"], value="GPT-4", filterable=False, min_width=50)
+                source = gr.Dropdown(label="Source", choices=["Hybrid", "Standalone"], value="Hybrid", filterable=False)
+                mode = gr.Dropdown(label="Mode", choices=["Accuracy", "Efficiency"], value="Accuracy", filterable=False)
+                history = gr.Dropdown(label="History", choices=["Yes", "No"], value="Yes", filterable=False)
+            with gr.Row():
                 user_input = gr.Textbox(show_label=False, placeholder="Enter your questions about AMR...", lines=3)
-                with gr.Row():
-                    submitBtn = gr.Button("Submit", variant="primary")
-                    emptyBtn = gr.Button("Clear")
-                search_field = gr.Textbox(show_label=False, placeholder="Reference...", lines=14)
+            with gr.Row():
+                submitBtn = gr.Button("Submit", variant="primary")
+                emptyBtn = gr.Button("Clear")
 
         context = gr.State([])
 
         def user(user_message, history):
             return user_message, history + [[user_message, None]]
         
-        def bot2(user_input, chatbot, context, search_field):
-            prompt, search_field = search_db(user_input, chatbot, context, search_field)
+        def bot2(user_input, chatbot, context, search_field, model, source, mode, history):
+            print(model, source, mode, history, user_input)
+            log_info(f"model: {model}, source: {source}, mode: {mode}, history: {history}\nuser_input:{user_input}")
+            prompt, search_field = search_db(user_input, chatbot, context, search_field, source, mode)
             
             # clear user input
             user_input = ""
 
             # print("prompt and search_field:", prompt, search_field)
             log_info("===get completion===")
-            response_stream = get_completion_openai_stream(prompt, context)
+            response_stream = get_completion_openai_stream(prompt, context, model, history)
             response = ""
             chatbot[-1][1] = ""
             for word in response_stream:
@@ -208,7 +211,7 @@ def main():
                         [user_input, chatbot], queue=False
                         ).then(
                             bot2, 
-                            [user_input, chatbot, context, search_field], 
+                            [user_input, chatbot, context, search_field, model, source, mode, history], 
                             [user_input, chatbot, context, search_field]
                         )
         emptyBtn.click(reset_state, outputs=[chatbot, context, user_input, search_field])

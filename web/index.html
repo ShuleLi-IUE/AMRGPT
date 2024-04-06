@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liuhui Bot</title>
+    <style>
+        .header {
+            background-color: #333;
+            height: 8vh;
+            margin-bottom: 2vh;
+            
+            display: flex;
+            align-items: center; /* 将内容垂直居中 */
+        }
+        .title-text {
+            margin: 0;
+            color: #f6f6f6;
+            margin-left: 15px;
+            font-size: 23px;
+            margin-right: 15px;
+            font-family:fantasy;
+        }
+        .header-tab {
+            margin: 0;
+            color: #f6f6f6;
+            margin-left: 20px;
+            font-size: 20px;
+            text-decoration: none;
+        }
+        .header-tab::before {
+            content: "•"; /* Unicode 点字符 */
+            margin-right: 5px; /* 调整点字符与文字之间的间距 */
+        }
+        .footer {
+            height: 40px;
+            position: fixed;
+            bottom: 0;
+            width: 100vw;
+            background-color: #f6f6f6; /* 可选：设置背景颜色 */
+            text-align: center; /* 可选：使内容居中显示 */
+            display: flex;
+            align-items: center; /* 将内容垂直居中 */
+            justify-content: center; /* 将内容水平居中 */
+
+        }
+        #gradio-iframe {
+            width: 100vw;
+            height: 90vh;
+            border: none; /* 去除边框 */
+            margin: 0 auto; /* 居中显示 */
+            display: block; /* 块级元素 */
+        }
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <!-- <div id="header">
+        <h1>Welcome to My HTML Page</h1>
+    </div> -->
+    <div class="header">
+        <p class="title-text">Liuhui-Bot</p>
+        <a href="/index" class="header-tab">AMR Policy</a>
+        <a href="/reference" class="header-tab">Reference</a>
+        <a href="/contact" class="header-tab">Contact</a>
+    </div>
+
+    <!-- Gradio 应用程序嵌入 iframe -->
+    <iframe id="gradio-iframe" src="http://liuhuibot.com:8889/" frameborder="0"></iframe>
+    <div class="footer">
+        Developed by Zhu Lab
+    </div>
+</body>
+</html>

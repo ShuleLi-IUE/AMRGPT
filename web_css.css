@@ -1,0 +1,23 @@
+.box_height {
+    height: 450px
+}
+
+.at_bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #f0f0f0; /* 可选：设置背景颜色 */
+    padding: 10px; /* 可选：设置内边距 */
+    text-align: center; /* 可选：使内容居中显示 */
+}
+
+.input_field {
+    /* margin: 200px; */
+    /* padding-bottom: -10px; */
+}
+
+.dropdown_group {
+    /* width: 150px; */
+    /* max-width: 300px; */
+}
