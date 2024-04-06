@@ -85,8 +85,8 @@ class ShuleVectorDB:
     def get_cnt(self):
         return self.cnt
         
-    def dump(self):
-        file_dump = 'index_' + 'n'+ str(self.cnt) + '_' + datetime.now().strftime('%m%d%H%M') + '.pickle'
+    def dump(self, file_dump=None):
+        if file_dump == None: file_dump = 'index_' + 'n'+ str(self.cnt) + '_' + datetime.now().strftime('%m%d%H%M') + '.pickle'
         with open(file_dump, 'wb') as f:
             pickle.dump(self, f)
         log_info("Dump index successfully, path: " + file_dump)

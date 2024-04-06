@@ -13,33 +13,44 @@ def init_openai():
     openai.api_key = os.getenv('OPENAI_API_KEY')
     global client
     client = OpenAI()
-
-def get_completion_openai(prompt, context, model="gpt-3.5-turbo"):
-    """封装 openai 接口"""
-    t0 = time.time()
-    messages = context + [{"role": "user", "content": prompt}]
-    response_stream = client.chat.completions.create(
-        # model=model,
-        model="gpt-4-turbo-preview", 
-        # "gpt-4"
-        messages=messages,
-        temperature=0,  # 模型输出的随机性，0 表示随机性最小
-        stream=True
-    )
-    for chunk in response_stream:
-        if chunk.choices[0].delta.content is not None:
-            yield chunk.choices[0].delta.content
-        else:
-            break
-    log_info(f"get_completion_openai costs, {time.time() - t0}")
-    # return response.choices[0].message.content
     
-def get_completion_openai_stream(prompt, context, model="gpt-3.5-turbo"):
+def get_completion_openai(prompt, context=None, model="GPT-4", history="False"):
     """封装 openai 接口"""
     t0 = time.time()
-    messages = context + [{"role": "user", "content": prompt}]
+    # messages = context + [{"role": "user", "content": prompt}]
+    messages = (context + [{"role": "user", "content": prompt}]) if history == "True" else [{"role": "user", "content": prompt}]
+    model_chosen = "gpt-4-turbo-preview" if model == "GPT-4" else "gpt-3.5-turbo"
+    response = client.chat.completions.create(
+        # model=model,
+        model=model_chosen, 
+        # "gpt-4"
+        messages=messages,
+        temperature=0,  # 模型输出的随机性，0 表示随机性最小
+    )
+    i = 0
+    while response.choices == None:
+        i += 1
+        if (i > 10): return "network failed"
+        print(f"openai failed, retry in 5 seconds...\n\tresponse: {response}")
+        time.sleep(5)
+        response = client.chat.completions.create(
+            # model=model,
+            model=model_chosen, 
+            # "gpt-4"
+            messages=messages,
+            temperature=0,  # 模型输出的随机性，0 表示随机性最小
+        )
+    log_info(f"get_completion_openai costs, {time.time() - t0}")
+    return response.choices[0].message.content
+    
+def get_completion_openai_stream(prompt, context, model="GPT-4", history="True"):
+    """封装 openai 接口"""
+    t0 = time.time()
+    messages = (context + [{"role": "user", "content": prompt}]) if history == "True" else [{"role": "user", "content": prompt}]
+    print("gpt-4-turbo-preview" if model == "GPT-4" else "gpt-3.5-turbo") 
     response_stream = client.chat.completions.create(
         # model=model,
+        # model="gpt-4-turbo-preview" if model == "GPT-4" else "gpt-3.5-turbo", 
         model="gpt-4-turbo-preview", 
         # "gpt-4"
         messages=messages,
@@ -51,7 +62,7 @@ def get_completion_openai_stream(prompt, context, model="gpt-3.5-turbo"):
             yield chunk.choices[0].delta.content
         else:
             break
-    log_info(f"get_completion_openai costs, {time.time() - t0}")
+    log_info(f"get_completion_openai_stream costs, {time.time() - t0}")
     # return response.choices[0].message.content
 
 
