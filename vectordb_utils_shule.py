@@ -4,7 +4,6 @@ import numpy as np
 import time
 import pickle
 from datetime import datetime
-from logger import log_info
 
 DIM = 1024
 MAX_ELEMENTS = 2000000
@@ -18,6 +17,7 @@ class ShuleVectorDB:
         self.cnt = 0
         self.data_dict = {}
         self.batch_size = batch_size
+        self.space = space
         '''
         "embeddings": ,
         "text": ,
@@ -28,8 +28,8 @@ class ShuleVectorDB:
         "country": ,
         "ORG": ,
         '''
-            
-    def add_documents_dense(self, type, texts, pages, title, year, country, ORG):
+
+    def add_documents_dense(self, type, texts, pages, title, year, country, ORG, verbose=True):
         n = len(texts)
         # ids = np.array([f"id_{i}" for i in np.arange(self.cnt, self.cnt + n)])
         ids = np.arange(self.cnt, self.cnt + n)
@@ -38,10 +38,10 @@ class ShuleVectorDB:
         embeddings = get_embedding_bge(train_texts,
                                        batch_size=self.batch_size)
         t1 = time.time()
-        log_info(f"one embedding time {(t1 - t0) / n}")
+        print("one embedding time ", (t1 - t0) / n)
         self.index_hnsw.add_items(embeddings, ids=ids)
         t2 = time.time()
-        log_info(f"one add index time {(t2 - t1) / n}")
+        print("one add index time ", (t2 - t1) / n)
         # store documents to dict
         for i in range(n):
             self.data_dict[ids[i]] = {"embeddings": embeddings[i],
@@ -53,26 +53,29 @@ class ShuleVectorDB:
                                       "country": country,
                                       "ORG": ORG}
         self.cnt += n
-        log_info(f"#{type}# Adding batch of {n} elements, now total index contains {self.cnt} elements")
-            
+        if verbose:
+            print(f"#{type}# Adding batch of {n} elements, now total index contains {self.cnt} elements")
+
     # def add_documents_sparse(self, type, texts, title, year, source, verbose=True):
-            
+
     # def add_documents_hybrid(self, type, texts, title, year, source, verbose=True):
-        
+
     def search_bge(self, query, top_n, verbose=True):
         t0 = time.time()
-        embedding = get_embedding_bge(query, 
+        embedding = get_embedding_bge(query,
                                       batch_size=self.batch_size)
-        
-        t1 = time.time()
-        log_info(f"get_embedding_bge costs {t1 - t0}")
-            
+
+        if verbose:
+            t1 = time.time()
+            print("get_embedding_bge costs ", t1 - t0)
+
         labels, distances = self.index_hnsw.knn_query(embedding, k=top_n)
-        
-        t2 = time.time()
-        log_info(f"index_hnsw.knn_query costs {t2 - t1}")
+
+        if verbose:
+            t2 = time.time()
+            print("index_hnsw.knn_query costs", t2 - t1)
         return labels[0].tolist()
-    
+
     def get_context_by_labels(self, labels):
         texts = [self.data_dict[key]["text"] for key in labels]
         pages = [self.data_dict[key]["page"] for key in labels]
@@ -81,17 +84,19 @@ class ShuleVectorDB:
         countries = [self.data_dict[key]["country"] for key in labels]
         ORGs = [self.data_dict[key]["ORG"] for key in labels]
         return texts, pages, titles, years, countries, ORGs
-    
+
     def get_cnt(self):
         return self.cnt
-        
+
+    def get_embeddings_by_labels(self, labels):
+        embeddings = [self.data_dict[key]["embeddings"] for key in labels]
+        return embeddings
+
+    def get_space(self):
+        return self.space
+
     def dump(self, file_dump=None):
         if file_dump == None: file_dump = 'index_' + 'n'+ str(self.cnt) + '_' + datetime.now().strftime('%m%d%H%M') + '.pickle'
         with open(file_dump, 'wb') as f:
             pickle.dump(self, f)
-        log_info("Dump index successfully, path: " + file_dump)
-        
-    
-        
-    
-        
+        print("Dump index successfully, path: " + file_dump)
